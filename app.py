@@ -46,6 +46,7 @@ def run_yt_dlp(task_id: str, url: str, media_type: str, quality: str, out_dir: s
 
     if media_type == "audio":
         cmd = base_cmd + [
+            "--no-overwrites",
             "-x", "--audio-format", "mp3",
             "--audio-quality", "0",
             "-o", out_template,
@@ -61,6 +62,7 @@ def run_yt_dlp(task_id: str, url: str, media_type: str, quality: str, out_dir: s
         }
         fmt = fmt_map.get(quality, fmt_map["best"])
         cmd = base_cmd + [
+            "--no-overwrites",
             "-f", fmt,
             "--merge-output-format", "mp4",
             "-o", out_template,
