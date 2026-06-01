@@ -26,6 +26,14 @@ def sanitize_filename(name: str) -> str:
     return re.sub(r'[\\/*?:"<>|]', "_", name)
 
 
+def normalize_url(url: str) -> str:
+    """Convert B站 /lists?sid= to /channel/collectiondetail?sid= supported by yt-dlp."""
+    m = re.match(r'https?://space\.bilibili\.com/(\d+)/lists\?sid=(\d+)', url)
+    if m:
+        return f"https://space.bilibili.com/{m.group(1)}/channel/collectiondetail?sid={m.group(2)}"
+    return url
+
+
 def run_yt_dlp(task_id: str, url: str, media_type: str, quality: str, out_dir: str):
     out_template = str(Path(out_dir) / "%(title)s.%(ext)s")
 
@@ -130,6 +138,7 @@ def index():
 
 
 def _create_task(url: str, media_type: str, quality: str, out_dir: str, batch_id: str = "") -> str:
+    url = normalize_url(url)
     task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
     with tasks_lock:
         tasks[task_id] = {
@@ -154,7 +163,7 @@ def _create_task(url: str, media_type: str, quality: str, out_dir: str, batch_id
 @app.route("/api/parse", methods=["POST"])
 def parse_url():
     data = request.get_json()
-    url = data.get("url", "").strip()
+    url = normalize_url(data.get("url", "").strip())
     if not url:
         return jsonify({"error": "请输入链接"}), 400
 
