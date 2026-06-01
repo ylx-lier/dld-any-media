@@ -218,6 +218,63 @@
   .empty-state { text-align: center; padding: 40px 20px; color: var(--sub); }
   .empty-state svg { width: 48px; height: 48px; stroke: #d1d5db; margin-bottom: 12px; }
   .empty-state p { font-size: 14px; font-weight: 500; }
+
+  /* ── Mode Toggle ── */
+  .mode-tabs { display: flex; background: #f3f4f6; border-radius: var(--radius-sm); padding: 4px; gap: 4px; }
+  .mode-tab { flex: 1; padding: 9px; border: none; background: transparent; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transition); color: var(--sub); }
+  .mode-tab.active { background: #fff; color: var(--klein); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+  /* ── Batch ── */
+  .batch-area { display: none; flex-direction: column; gap: 10px; }
+  .batch-area.show { display: flex; }
+  .batch-area textarea {
+    width: 100%; height: 100px; padding: 13px 16px;
+    border: 2px solid #e5e7eb; border-radius: var(--radius-sm);
+    font-size: 14px; font-family: inherit; font-weight: 500;
+    transition: var(--transition); outline: none; background: #f9fafb;
+    resize: vertical;
+  }
+  .batch-area textarea:focus { border-color: var(--klein); box-shadow: 0 0 0 4px var(--klein-glow); background: #fff; }
+  .parse-row { display: flex; gap: 8px; }
+  .parse-row .parse-btn { flex: 1; }
+  .parse-btn {
+    padding: 12px; border: 2px dashed var(--klein); background: #eef2ff;
+    color: var(--klein); border-radius: var(--radius-sm); font-size: 14px;
+    font-weight: 700; cursor: pointer; transition: var(--transition);
+  }
+  .parse-btn:hover { background: #dde4ff; }
+  .parse-btn.loading { opacity: 0.6; pointer-events: none; }
+
+  /* ── Playlist Preview ── */
+  .playlist-preview { display: none; flex-direction: column; gap: 8px; }
+  .playlist-preview.show { display: flex; }
+  .playlist-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .playlist-header .pl-title { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .playlist-header .pl-count { font-size: 12px; color: var(--sub); font-weight: 600; white-space: nowrap; }
+  .playlist-items { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .playlist-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 10px; background: #f9fafb; transition: var(--transition); cursor: pointer;
+  }
+  .playlist-item:hover { background: #f0f2ff; }
+  .playlist-item .pl-check {
+    width: 20px; height: 20px; border-radius: 6px; border: 2px solid #d1d5db;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: var(--transition);
+  }
+  .playlist-item.checked .pl-check { background: var(--klein); border-color: var(--klein); }
+  .playlist-item.checked .pl-check::after { content: '✓'; color: #fff; font-size: 12px; font-weight: 700; }
+  .playlist-item .pl-info { flex: 1; min-width: 0; }
+  .playlist-item .pl-info .pl-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .playlist-item .pl-info .pl-dur { font-size: 11px; color: var(--sub); }
+  .playlist-item .pl-idx { font-size: 11px; color: var(--sub); font-weight: 600; flex-shrink: 0; }
+  .batch-actions { display: flex; gap: 8px; }
+  .batch-actions .btn-cancel {
+    padding: 12px 20px; border: 2px solid #e5e7eb; background: #fff;
+    border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: var(--transition); color: var(--sub);
+  }
+  .batch-actions .btn-cancel:hover { border-color: #d1d5db; }
 </style>
 </head>
 <body>
@@ -233,12 +290,46 @@
 
   <!-- Main Card -->
   <div class="card">
-    <!-- URL Input -->
-    <div class="input-group">
+    <!-- Mode Toggle -->
+    <div class="mode-tabs" id="modeTabs">
+      <button class="mode-tab active" data-mode="single">单个链接</button>
+      <button class="mode-tab" data-mode="batch">批量 / 合集</button>
+    </div>
+
+    <!-- Single URL Input -->
+    <div class="input-group" id="singleGroup">
       <label>链接地址</label>
       <div class="input-row">
         <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
         <button id="pasteBtn">粘贴</button>
+      </div>
+    </div>
+
+    <!-- Batch URL Area -->
+    <div class="batch-area" id="batchGroup">
+      <div class="input-group" style="gap:6px">
+        <label>输入链接（每行一个，或粘贴合集链接后点解析）</label>
+        <textarea id="batchInput" placeholder="https://www.bilibili.com/video/BVxxx...
+https://www.youtube.com/watch?v=xxx...
+或粘贴合集/播放列表链接点击下方解析"></textarea>
+        <div style="font-size:11px;color:var(--sub);margin-top:2px;">B站提示: 如遇 412 错误，请用浏览器插件导出 cookies.txt 放到下载目录</div>
+      </div>
+      <div class="parse-row">
+        <button class="parse-btn" id="parseBtn">检测并解析合集</button>
+        <button id="batchPasteBtn" style="padding:12px 16px;border:2px solid #e5e7eb;background:#fff;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;color:var(--sub);white-space:nowrap;">粘贴</button>
+      </div>
+      <!-- Playlist Preview -->
+      <div class="playlist-preview" id="playlistPreview">
+        <div class="playlist-header">
+          <span class="pl-title" id="plTitle"></span>
+          <span class="pl-count" id="plCount"></span>
+          <button id="plSelectAll" style="font-size:12px;font-weight:600;border:none;background:none;color:var(--klein);cursor:pointer;">全选</button>
+        </div>
+        <div class="playlist-items" id="playlistItems"></div>
+        <div class="batch-actions">
+          <button class="dl-btn" id="batchDlBtn" style="flex:1"><span class="btn-text">下载全部选中</span></button>
+          <button class="btn-cancel" id="batchClear">清空</button>
+        </div>
       </div>
     </div>
 
@@ -306,6 +397,8 @@
 <script>
 // ── State ──
 let mediaType = 'video';
+let currentMode = 'single';
+let playlistData = [];
 let pollTimer = null;
 
 // ── DOM refs ──
@@ -317,9 +410,26 @@ const taskList = $('#taskList');
 const toast = $('#toast');
 const qualityGroup = $('#qualityGroup');
 const qualitySelect = $('#qualitySelect');
+const singleGroup = $('#singleGroup');
+const batchGroup = $('#batchGroup');
+const batchInput = $('#batchInput');
+const parseBtn = $('#parseBtn');
+const playlistPreview = $('#playlistPreview');
+const playlistItems = $('#playlistItems');
+const plTitle = $('#plTitle');
+const plCount = $('#plCount');
+const batchDlBtn = $('#batchDlBtn');
 
-// ── Init ──
-// dir value set via HTML attribute
+// ── Mode switching ──
+$('#modeTabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.mode-tab');
+  if (!tab) return;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentMode = tab.dataset.mode;
+  singleGroup.style.display = currentMode === 'single' ? 'flex' : 'none';
+  batchGroup.classList.toggle('show', currentMode === 'batch');
+});
 
 // ── Segmented control ──
 $('#typeSeg').addEventListener('click', (e) => {
@@ -331,12 +441,16 @@ $('#typeSeg').addEventListener('click', (e) => {
   qualityGroup.style.display = mediaType === 'audio' ? 'none' : 'flex';
 });
 
-// ── Paste ──
+// ── Paste (single) ──
 $('#pasteBtn').addEventListener('click', async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (text) { urlInput.value = text; urlInput.focus(); }
-  } catch { urlInput.focus(); }
+  try { const text = await navigator.clipboard.readText(); if (text) { urlInput.value = text; urlInput.focus(); } }
+  catch { urlInput.focus(); }
+});
+
+// ── Paste (batch) ──
+$('#batchPasteBtn').addEventListener('click', async () => {
+  try { const text = await navigator.clipboard.readText(); if (text) { batchInput.value = text; batchInput.focus(); } }
+  catch { batchInput.focus(); }
 });
 
 // ── Directory chips ──
@@ -348,7 +462,140 @@ $('#dirChips').addEventListener('click', (e) => {
   dirInput.value = chip.dataset.path;
 });
 
-// ── Download ──
+// ── Parse playlist/collection ──
+parseBtn.addEventListener('click', async () => {
+  const text = batchInput.value.trim();
+  if (!text) { showToast('请先输入链接'); return; }
+
+  // Use first non-empty line as the URL to parse for playlists
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const url = lines[0];
+
+  parseBtn.classList.add('loading');
+  parseBtn.textContent = '解析中...';
+
+  try {
+    const res = await fetch('/api/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (data.error && data.type !== 'single') {
+      // Parse completely failed — show error but still let user see batch input
+      showToast(data.error);
+    } else if (data.type === 'playlist') {
+      playlistData = data.entries;
+      plTitle.textContent = data.title;
+      plCount.textContent = `共 ${data.count} 个视频`;
+      showToast(`检测到合集: ${data.title} (${data.count}个视频)`);
+    } else {
+      // Single URL or multi-line paste
+      playlistData = lines.map((u, i) => ({
+        title: `链接 ${i + 1}`, url: u, duration: 0, index: i + 1
+      }));
+      plTitle.textContent = `手动输入 (${lines.length} 个链接)`;
+      plCount.textContent = `共 ${lines.length} 个`;
+    }
+    renderPlaylist();
+    playlistPreview.classList.add('show');
+  } catch (err) {
+    showToast('解析失败，请检查链接或网络');
+  }
+
+  parseBtn.classList.remove('loading');
+  parseBtn.textContent = '检测并解析合集';
+});
+
+function renderPlaylist() {
+  playlistItems.innerHTML = playlistData.map((item, i) => {
+    const dur = item.duration ? `${Math.floor(item.duration / 60)}:${String(item.duration % 60).padStart(2, '0')}` : '';
+    return `<div class="playlist-item checked" data-idx="${i}" data-url="${escapeHtmlAttr(item.url)}">
+      <div class="pl-check"></div>
+      <div class="pl-info">
+        <div class="pl-name" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+        ${dur ? `<div class="pl-dur">${dur}</div>` : ''}
+      </div>
+      <span class="pl-idx">#${item.index}</span>
+    </div>`;
+  }).join('');
+
+  // Wire click to toggle
+  playlistItems.querySelectorAll('.playlist-item').forEach(el => {
+    el.addEventListener('click', () => el.classList.toggle('checked'));
+  });
+
+  updatePlaylistCount();
+}
+
+// ── Select all / deselect all ──
+let allSelected = true;
+$('#plSelectAll').addEventListener('click', () => {
+  allSelected = !allSelected;
+  $('#plSelectAll').textContent = allSelected ? '全选' : '取消全选';
+  playlistItems.querySelectorAll('.playlist-item').forEach(el => {
+    el.classList.toggle('checked', allSelected);
+  });
+  updatePlaylistCount();
+});
+
+function updatePlaylistCount() {
+  const selected = playlistItems.querySelectorAll('.playlist-item.checked').length;
+  batchDlBtn.querySelector('.btn-text').textContent = `下载选中 (${selected})`;
+}
+
+// ── Batch download ──
+batchDlBtn.addEventListener('click', async () => {
+  const dir = dirInput.value.trim();
+  if (!dir) { showToast('请选择下载目录'); return; }
+
+  const selected = playlistItems.querySelectorAll('.playlist-item.checked');
+  if (selected.length === 0) { showToast('请至少选择一个视频'); return; }
+
+  const urls = Array.from(selected).map(el => ({
+    url: el.dataset.url,
+    title: el.querySelector('.pl-name').textContent,
+  }));
+
+  batchDlBtn.classList.add('loading');
+  batchDlBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        urls,
+        type: mediaType,
+        quality: qualitySelect.value,
+        directory: dir,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error); }
+    else {
+      showToast(`已创建 ${data.task_ids.length} 个下载任务`);
+      playlistPreview.classList.remove('show');
+      playlistData = [];
+      batchInput.value = '';
+      startPolling();
+    }
+  } catch (err) {
+    showToast('网络错误，请稍后重试');
+  }
+
+  batchDlBtn.classList.remove('loading');
+  batchDlBtn.disabled = false;
+});
+
+// ── Clear batch ──
+$('#batchClear').addEventListener('click', () => {
+  playlistPreview.classList.remove('show');
+  playlistData = [];
+  batchInput.value = '';
+});
+
+// ── Single download ──
 dlBtn.addEventListener('click', async () => {
   const url = urlInput.value.trim();
   const dir = dirInput.value.trim();
@@ -363,23 +610,12 @@ dlBtn.addEventListener('click', async () => {
     const res = await fetch('/api/download', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url,
-        type: mediaType,
-        quality: qualitySelect.value,
-        directory: dir,
-      }),
+      body: JSON.stringify({ url, type: mediaType, quality: qualitySelect.value, directory: dir }),
     });
     const data = await res.json();
     if (data.error) { showToast(data.error); }
-    else {
-      showToast('任务已创建');
-      urlInput.value = '';
-      startPolling();
-    }
-  } catch (err) {
-    showToast('网络错误，请稍后重试');
-  }
+    else { showToast('任务已创建'); urlInput.value = ''; startPolling(); }
+  } catch (err) { showToast('网络错误，请稍后重试'); }
 
   dlBtn.classList.remove('loading');
   dlBtn.disabled = false;
@@ -396,10 +632,7 @@ function fetchTasks() {
   fetch('/api/tasks').then(r => r.json()).then(tasks => {
     renderTasks(tasks);
     const active = tasks.some(t => t.status === 'downloading' || t.status === 'queued');
-    if (!active && pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = null;
-    }
+    if (!active && pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   });
 }
 
@@ -430,36 +663,31 @@ function renderTasks(tasks) {
     </div>`;
   }).join('');
 
-  // wire delete buttons
   taskList.querySelectorAll('.task-delete').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const id = btn.dataset.id;
-      fetch(`/api/tasks/${id}`, { method: 'DELETE' }).then(() => fetchTasks());
+      fetch(`/api/tasks/${btn.dataset.id}`, { method: 'DELETE' }).then(() => fetchTasks());
     });
   });
 }
 
-const statusMap = {
-  queued: '排队中', downloading: '下载中', completed: '已完成', failed: '失败',
-};
+const statusMap = { queued: '排队中', downloading: '下载中', completed: '已完成', failed: '失败' };
 
 function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+function escapeHtmlAttr(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── Toast ──
 let toastTimer;
 function showToast(msg) {
-  toast.textContent = msg;
-  toast.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  toast.textContent = msg; toast.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
-// ── Keyboard shortcut: Enter to download ──
+// ── Keyboard shortcut ──
 urlInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !dlBtn.disabled) dlBtn.click();
 });

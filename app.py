@@ -29,9 +29,15 @@ def sanitize_filename(name: str) -> str:
 def run_yt_dlp(task_id: str, url: str, media_type: str, quality: str, out_dir: str):
     out_template = str(Path(out_dir) / "%(title)s.%(ext)s")
 
+    base_cmd = ["yt-dlp"]
+    # Add cookies from file if it exists (for B站 etc.)
+    for cookie_path in [os.path.join(out_dir, "cookies.txt"), "cookies.txt"]:
+        if os.path.isfile(cookie_path):
+            base_cmd += ["--cookies", cookie_path]
+            break
+
     if media_type == "audio":
-        cmd = [
-            "yt-dlp",
+        cmd = base_cmd + [
             "-x", "--audio-format", "mp3",
             "--audio-quality", "0",
             "-o", out_template,
@@ -46,8 +52,7 @@ def run_yt_dlp(task_id: str, url: str, media_type: str, quality: str, out_dir: s
             "480p": "bestvideo[height<=480]+bestaudio/best[height<=480]",
         }
         fmt = fmt_map.get(quality, fmt_map["best"])
-        cmd = [
-            "yt-dlp",
+        cmd = base_cmd + [
             "-f", fmt,
             "--merge-output-format", "mp4",
             "-o", out_template,
@@ -124,20 +129,7 @@ def index():
     )
 
 
-@app.route("/api/download", methods=["POST"])
-def start_download():
-    data = request.get_json()
-    url = data.get("url", "").strip()
-    media_type = data.get("type", "video")
-    quality = data.get("quality", "best")
-    out_dir = data.get("directory", str(downloads_dir))
-
-    if not url:
-        return jsonify({"error": "请输入链接"}), 400
-
-    if not os.path.isdir(out_dir):
-        return jsonify({"error": "目录不存在"}), 400
-
+def _create_task(url: str, media_type: str, quality: str, out_dir: str, batch_id: str = "") -> str:
     task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
     with tasks_lock:
         tasks[task_id] = {
@@ -146,6 +138,7 @@ def start_download():
             "type": media_type,
             "quality": quality,
             "directory": out_dir,
+            "batch_id": batch_id,
             "status": "queued",
             "progress": 0,
             "filename": "",
@@ -153,11 +146,103 @@ def start_download():
             "log": [],
             "created": datetime.now().isoformat(),
         }
-
     t = threading.Thread(target=run_yt_dlp, args=(task_id, url, media_type, quality, out_dir), daemon=True)
     t.start()
+    return task_id
 
-    return jsonify({"task_id": task_id})
+
+@app.route("/api/parse", methods=["POST"])
+def parse_url():
+    data = request.get_json()
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "请输入链接"}), 400
+
+    base_cmd = ["yt-dlp"]
+    for cp in [os.path.join(str(downloads_dir), "cookies.txt"), "cookies.txt"]:
+        if os.path.isfile(cp):
+            base_cmd += ["--cookies", cp]
+            break
+
+    try:
+        proc = subprocess.run(
+            base_cmd + ["--flat-playlist", "-J", "--no-download", url],
+            capture_output=True,
+            text=True,
+            encoding=locale.getpreferredencoding(),
+            errors="replace",
+            timeout=30,
+        )
+
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "")[:200]
+            hint = ""
+            if "412" in stderr and "bilibili" in url.lower():
+                hint = " | 建议: 将 B站 cookies.txt 放到下载目录中"
+            return jsonify({"error": f"解析失败{hint}", "type": "single", "title": "", "entries": [], "count": 0})
+
+        info = json.loads(proc.stdout)
+        entries = info.get("entries", [])
+        if entries:
+            items = [
+                {
+                    "title": e.get("title", "未知"),
+                    "url": e.get("url", "") or e.get("webpage_url", ""),
+                    "duration": e.get("duration") or 0,
+                    "index": e.get("playlist_index", i + 1),
+                }
+                for i, e in enumerate(entries)
+            ]
+            return jsonify({
+                "type": "playlist",
+                "title": info.get("title", "合集"),
+                "count": len(items),
+                "entries": items,
+            })
+        else:
+            return jsonify({
+                "type": "single",
+                "title": info.get("title", ""),
+                "entries": [{"title": info.get("title", "未知"), "url": url, "duration": info.get("duration") or 0, "index": 1}],
+                "count": 1,
+            })
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "解析超时，请检查链接"}), 408
+    except Exception as e:
+        return jsonify({"error": f"解析失败: {str(e)}"}), 500
+
+
+@app.route("/api/download", methods=["POST"])
+def start_download():
+    data = request.get_json()
+    urls = data.get("urls", [])
+    single_url = data.get("url", "").strip()
+    media_type = data.get("type", "video")
+    quality = data.get("quality", "best")
+    out_dir = data.get("directory", str(downloads_dir))
+
+    if not os.path.isdir(out_dir):
+        return jsonify({"error": "目录不存在"}), 400
+
+    if urls:
+        batch_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
+        task_ids = []
+        for item in urls:
+            if isinstance(item, dict):
+                u = item.get("url", "").strip()
+            else:
+                u = str(item).strip()
+            if u:
+                tid = _create_task(u, media_type, quality, out_dir, batch_id)
+                task_ids.append(tid)
+        if not task_ids:
+            return jsonify({"error": "请输入链接"}), 400
+        return jsonify({"task_ids": task_ids, "batch_id": batch_id})
+    else:
+        if not single_url:
+            return jsonify({"error": "请输入链接"}), 400
+        task_id = _create_task(single_url, media_type, quality, out_dir)
+        return jsonify({"task_id": task_id})
 
 
 @app.route("/api/tasks")
