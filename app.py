@@ -34,8 +34,11 @@ def normalize_url(url: str) -> str:
     return url
 
 
-def run_yt_dlp(task_id: str, url: str, media_type: str, quality: str, out_dir: str):
-    out_template = str(Path(out_dir) / "%(title)s.%(ext)s")
+def run_yt_dlp(task_id: str, url: str, media_type: str, quality: str, out_dir: str, custom_filename: str = ""):
+    if custom_filename:
+        out_template = str(Path(out_dir) / f"{custom_filename}.%(ext)s")
+    else:
+        out_template = str(Path(out_dir) / "%(title)s.%(ext)s")
 
     base_cmd = ["yt-dlp"]
     # Add cookies from file if it exists (for B站 etc.)
@@ -139,7 +142,7 @@ def index():
     )
 
 
-def _create_task(url: str, media_type: str, quality: str, out_dir: str, batch_id: str = "") -> str:
+def _create_task(url: str, media_type: str, quality: str, out_dir: str, batch_id: str = "", custom_filename: str = "") -> str:
     url = normalize_url(url)
     task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
     with tasks_lock:
@@ -150,6 +153,7 @@ def _create_task(url: str, media_type: str, quality: str, out_dir: str, batch_id
             "quality": quality,
             "directory": out_dir,
             "batch_id": batch_id,
+            "custom_filename": custom_filename,
             "status": "queued",
             "progress": 0,
             "filename": "",
@@ -157,7 +161,7 @@ def _create_task(url: str, media_type: str, quality: str, out_dir: str, batch_id
             "log": [],
             "created": datetime.now().isoformat(),
         }
-    t = threading.Thread(target=run_yt_dlp, args=(task_id, url, media_type, quality, out_dir), daemon=True)
+    t = threading.Thread(target=run_yt_dlp, args=(task_id, url, media_type, quality, out_dir, custom_filename), daemon=True)
     t.start()
     return task_id
 
@@ -241,10 +245,12 @@ def start_download():
         for item in urls:
             if isinstance(item, dict):
                 u = item.get("url", "").strip()
+                custom_name = item.get("custom_name", "").strip()
             else:
                 u = str(item).strip()
+                custom_name = ""
             if u:
-                tid = _create_task(u, media_type, quality, out_dir, batch_id)
+                tid = _create_task(u, media_type, quality, out_dir, batch_id, custom_name)
                 task_ids.append(tid)
         if not task_ids:
             return jsonify({"error": "请输入链接"}), 400

@@ -268,6 +268,18 @@
   .playlist-item .pl-info .pl-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .playlist-item .pl-info .pl-dur { font-size: 11px; color: var(--sub); }
   .playlist-item .pl-idx { font-size: 11px; color: var(--sub); font-weight: 600; flex-shrink: 0; }
+  .pl-rename-btn {
+    width: 28px; height: 28px; border-radius: 8px; border: 1.5px solid var(--klein);
+    background: #eef2ff; color: var(--klein); cursor: pointer; flex-shrink: 0;
+    font-size: 13px; display: flex; align-items: center; justify-content: center;
+    transition: var(--transition); margin-left: 4px;
+  }
+  .pl-rename-btn:hover { background: var(--klein); color: #fff; }
+  .pl-name-edit {
+    font-size: 13px; font-weight: 600; padding: 4px 8px; border: 2px solid var(--klein);
+    border-radius: 8px; outline: none; width: 100%; font-family: inherit;
+    box-shadow: 0 0 0 3px var(--klein-glow);
+  }
   .batch-actions { display: flex; gap: 8px; }
   .batch-actions .btn-cancel {
     padding: 12px 20px; border: 2px solid #e5e7eb; background: #fff;
@@ -508,21 +520,69 @@ parseBtn.addEventListener('click', async () => {
 });
 
 function renderPlaylist() {
+  playlistData.forEach((item, i) => { item.custom_name = item.custom_name || ''; });
   playlistItems.innerHTML = playlistData.map((item, i) => {
     const dur = item.duration ? `${Math.floor(item.duration / 60)}:${String(item.duration % 60).padStart(2, '0')}` : '';
+    const displayName = item.custom_name || item.title;
     return `<div class="playlist-item checked" data-idx="${i}" data-url="${escapeHtmlAttr(item.url)}">
       <div class="pl-check"></div>
       <div class="pl-info">
-        <div class="pl-name" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+        <div class="pl-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</div>
         ${dur ? `<div class="pl-dur">${dur}</div>` : ''}
       </div>
       <span class="pl-idx">#${item.index}</span>
+      <button class="pl-rename-btn" data-idx="${i}" title="重命名">✎</button>
     </div>`;
   }).join('');
 
-  // Wire click to toggle
+  // Wire click to toggle (but not on rename button)
   playlistItems.querySelectorAll('.playlist-item').forEach(el => {
-    el.addEventListener('click', () => el.classList.toggle('checked'));
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.pl-rename-btn') || e.target.closest('.pl-name-edit')) return;
+      el.classList.toggle('checked');
+      updatePlaylistCount();
+    });
+  });
+
+  // Wire rename buttons
+  playlistItems.querySelectorAll('.pl-rename-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.idx);
+      const item = playlistData[idx];
+      const row = btn.closest('.playlist-item');
+      const nameEl = row.querySelector('.pl-name');
+      if (!nameEl) return;
+
+      // Switch to edit mode
+      const oldName = item.custom_name || item.title;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'pl-name-edit';
+      input.value = oldName;
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+        if (ev.key === 'Escape') { input.value = item.title; input.blur(); }
+      });
+      input.addEventListener('blur', () => {
+        const newName = input.value.trim();
+        if (newName && newName !== item.title) {
+          item.custom_name = newName;
+          nameEl.textContent = newName;
+          nameEl.title = newName;
+        } else {
+          item.custom_name = '';
+          nameEl.textContent = item.title;
+          nameEl.title = item.title;
+        }
+        nameEl.style.display = '';
+        input.remove();
+      });
+      nameEl.style.display = 'none';
+      nameEl.parentNode.insertBefore(input, nameEl.nextSibling);
+      input.focus();
+      input.select();
+    });
   });
 
   updatePlaylistCount();
@@ -552,10 +612,15 @@ batchDlBtn.addEventListener('click', async () => {
   const selected = playlistItems.querySelectorAll('.playlist-item.checked');
   if (selected.length === 0) { showToast('请至少选择一个视频'); return; }
 
-  const urls = Array.from(selected).map(el => ({
-    url: el.dataset.url,
-    title: el.querySelector('.pl-name').textContent,
-  }));
+  const urls = Array.from(selected).map(el => {
+    const idx = parseInt(el.dataset.idx);
+    const item = playlistData[idx];
+    return {
+      url: el.dataset.url,
+      title: el.querySelector('.pl-name').textContent,
+      custom_name: item.custom_name || '',
+    };
+  });
 
   batchDlBtn.classList.add('loading');
   batchDlBtn.disabled = true;
