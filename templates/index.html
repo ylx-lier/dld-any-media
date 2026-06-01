@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DLD Any Media</title>
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --klein: #002FA7;
+    --klein-light: #1a4dc7;
+    --klein-dark: #001f6e;
+    --klein-glow: rgba(0, 47, 167, 0.3);
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --sub: #6b7280;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --radius: 20px;
+    --radius-sm: 12px;
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px 60px;
+  }
+
+  .app { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 24px; }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    padding: 8px 0 0;
+  }
+  .logo {
+    width: 56px; height: 56px;
+    background: var(--klein);
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 32px var(--klein-glow);
+    overflow: hidden;
+  }
+  .header h1 {
+    font-size: 26px; font-weight: 900; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--klein) 0%, #4f7dff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p { color: var(--sub); font-size: 14px; margin-top: 4px; font-weight: 500; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+
+  /* ── Input ── */
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-group label {
+    font-size: 13px; font-weight: 700; color: var(--sub); text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .input-row { display: flex; gap: 8px; }
+  .input-row input { flex: 1; }
+  .input-row button {
+    white-space: nowrap; padding: 0 18px;
+    background: var(--klein); color: #fff; border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: var(--transition);
+  }
+  .input-row button:hover { background: var(--klein-light); transform: scale(1.03); }
+
+  input[type="text"], select {
+    width: 100%; padding: 13px 16px;
+    border: 2px solid #e5e7eb; border-radius: var(--radius-sm);
+    font-size: 15px; font-family: inherit; font-weight: 500;
+    transition: var(--transition); outline: none;
+    background: #f9fafb;
+  }
+  input:focus, select:focus {
+    border-color: var(--klein);
+    box-shadow: 0 0 0 4px var(--klein-glow);
+    background: #fff;
+  }
+
+  /* ── Segmented Control ── */
+  .segmented {
+    display: flex; background: #f3f4f6; border-radius: var(--radius-sm);
+    padding: 4px; gap: 4px;
+  }
+  .seg-btn {
+    flex: 1; padding: 11px 8px; border: none; background: transparent;
+    border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: var(--transition); color: var(--sub); text-align: center;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .seg-btn.active {
+    background: #fff; color: var(--klein);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .seg-btn svg { width: 18px; height: 18px; }
+
+  /* ── Dir picker ── */
+  .dir-row { display: flex; gap: 8px; align-items: center; }
+  .dir-row input { flex: 1; }
+  .dir-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dir-chip {
+    padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e5e7eb;
+    background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: var(--transition); color: var(--sub); white-space: nowrap;
+  }
+  .dir-chip:hover { border-color: var(--klein); color: var(--klein); background: #eef2ff; }
+  .dir-chip.active { background: var(--klein); color: #fff; border-color: var(--klein); }
+
+  /* ── Download Button ── */
+  .dl-btn {
+    width: 100%; padding: 16px; border: none;
+    background: linear-gradient(135deg, var(--klein) 0%, #3b6eff 100%);
+    color: #fff; font-size: 17px; font-weight: 800; letter-spacing: 0.3px;
+    border-radius: var(--radius-sm); cursor: pointer;
+    transition: var(--transition); position: relative; overflow: hidden;
+    box-shadow: 0 6px 24px var(--klein-glow);
+  }
+  .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 36px var(--klein-glow); }
+  .dl-btn:active { transform: scale(0.98); }
+  .dl-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .dl-btn .spinner {
+    display: none; width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite;
+    margin-right: 10px; vertical-align: middle;
+  }
+  .dl-btn.loading .spinner { display: inline-block; }
+  .dl-btn.loading .btn-text { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ── Task List ── */
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-item {
+    background: var(--card); border-radius: var(--radius-sm); padding: 16px 20px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    transition: var(--transition);
+    cursor: default;
+  }
+  .task-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+  .task-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .task-icon.video { background: #eef2ff; }
+  .task-icon.audio { background: #fef3c7; }
+  .task-icon.video svg { stroke: var(--klein); }
+  .task-icon.audio svg { stroke: #d97706; }
+  .task-icon svg { width: 22px; height: 22px; }
+
+  .task-info { flex: 1; min-width: 0; }
+  .task-info .name {
+    font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; line-height: 1.3;
+  }
+  .task-info .meta { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+  .task-status {
+    font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+  }
+  .task-status.completed { background: #d1fae5; color: #065f46; }
+  .task-status.downloading { background: #dbeafe; color: #1e40af; animation: pulse 1.5s infinite; }
+  .task-status.failed { background: #fee2e2; color: #991b1b; }
+  .task-status.queued { background: #f3f4f6; color: #6b7280; }
+
+  .task-delete {
+    width: 28px; height: 28px; border-radius: 8px; border: none;
+    background: transparent; cursor: pointer; color: #d1d5db; font-size: 16px;
+    transition: var(--transition); display: flex; align-items: center; justify-content: center;
+  }
+  .task-delete:hover { background: #fee2e2; color: var(--danger); }
+
+  /* ── Progress bar ── */
+  .progress-wrap { width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; margin-top: 6px; }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--klein), #3b6eff);
+    border-radius: 2px; transition: width 0.3s;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: #1f2937; color: #fff; padding: 12px 24px; border-radius: 30px;
+    font-size: 14px; font-weight: 600; z-index: 999;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--sub); }
+  .empty-state svg { width: 48px; height: 48px; stroke: #d1d5db; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='logo.jpg') }}" alt="DLD" width="56" height="56" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">
+    </div>
+    <h1>DLD Any Media</h1>
+    <p>粘贴链接，选择格式，一键下载</p>
+  </div>
+
+  <!-- Main Card -->
+  <div class="card">
+    <!-- URL Input -->
+    <div class="input-group">
+      <label>链接地址</label>
+      <div class="input-row">
+        <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+        <button id="pasteBtn">粘贴</button>
+      </div>
+    </div>
+
+    <!-- Media Type -->
+    <div class="input-group">
+      <label>下载类型</label>
+      <div class="segmented" id="typeSeg">
+        <button class="seg-btn active" data-type="video">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polygon points="10 9 16 12 10 15 10 9"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+          视频
+        </button>
+        <button class="seg-btn" data-type="audio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          仅音频
+        </button>
+      </div>
+    </div>
+
+    <!-- Quality (video only) -->
+    <div class="input-group" id="qualityGroup">
+      <label>画质</label>
+      <select id="qualitySelect">
+        <option value="best">最佳质量</option>
+        <option value="1080p">1080p</option>
+        <option value="720p">720p</option>
+        <option value="480p">480p</option>
+      </select>
+    </div>
+
+    <!-- Directory -->
+    <div class="input-group">
+      <label>保存到</label>
+      <div class="dir-quick" id="dirChips">
+        <button class="dir-chip active" data-path="{{ downloads }}">下载</button>
+        <button class="dir-chip" data-path="{{ desktop }}">桌面</button>
+        <button class="dir-chip" data-path="{{ music }}">音乐</button>
+        <button class="dir-chip" data-path="{{ videos }}">视频</button>
+      </div>
+      <input type="text" id="dirInput" value="{{ downloads }}" placeholder="输入或粘贴目录路径...">
+    </div>
+
+    <!-- Download Button -->
+    <button class="dl-btn" id="dlBtn">
+      <span class="spinner"></span>
+      <span class="btn-text">开始下载</span>
+    </button>
+  </div>
+
+  <!-- Task History -->
+  <div class="card">
+    <div class="input-group" style="gap:0">
+      <label>下载记录</label>
+    </div>
+    <div class="task-list" id="taskList">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <p>暂无下载记录</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let mediaType = 'video';
+let pollTimer = null;
+
+// ── DOM refs ──
+const $ = (s) => document.querySelector(s);
+const urlInput = $('#urlInput');
+const dirInput = $('#dirInput');
+const dlBtn = $('#dlBtn');
+const taskList = $('#taskList');
+const toast = $('#toast');
+const qualityGroup = $('#qualityGroup');
+const qualitySelect = $('#qualitySelect');
+
+// ── Init ──
+// dir value set via HTML attribute
+
+// ── Segmented control ──
+$('#typeSeg').addEventListener('click', (e) => {
+  const btn = e.target.closest('.seg-btn');
+  if (!btn) return;
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  mediaType = btn.dataset.type;
+  qualityGroup.style.display = mediaType === 'audio' ? 'none' : 'flex';
+});
+
+// ── Paste ──
+$('#pasteBtn').addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) { urlInput.value = text; urlInput.focus(); }
+  } catch { urlInput.focus(); }
+});
+
+// ── Directory chips ──
+$('#dirChips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.dir-chip');
+  if (!chip) return;
+  document.querySelectorAll('.dir-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  dirInput.value = chip.dataset.path;
+});
+
+// ── Download ──
+dlBtn.addEventListener('click', async () => {
+  const url = urlInput.value.trim();
+  const dir = dirInput.value.trim();
+
+  if (!url) { showToast('请先输入链接地址'); return; }
+  if (!dir) { showToast('请选择下载目录'); return; }
+
+  dlBtn.classList.add('loading');
+  dlBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url,
+        type: mediaType,
+        quality: qualitySelect.value,
+        directory: dir,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error); }
+    else {
+      showToast('任务已创建');
+      urlInput.value = '';
+      startPolling();
+    }
+  } catch (err) {
+    showToast('网络错误，请稍后重试');
+  }
+
+  dlBtn.classList.remove('loading');
+  dlBtn.disabled = false;
+});
+
+// ── Poll tasks ──
+function startPolling() {
+  if (pollTimer) return;
+  fetchTasks();
+  pollTimer = setInterval(fetchTasks, 1500);
+}
+
+function fetchTasks() {
+  fetch('/api/tasks').then(r => r.json()).then(tasks => {
+    renderTasks(tasks);
+    const active = tasks.some(t => t.status === 'downloading' || t.status === 'queued');
+    if (!active && pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  });
+}
+
+function renderTasks(tasks) {
+  if (tasks.length === 0) {
+    taskList.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <p>暂无下载记录</p></div>`;
+    return;
+  }
+  taskList.innerHTML = tasks.map(t => {
+    const icon = t.type === 'audio'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polygon points="10 9 16 12 10 15 10 9"/><line x1="8" y1="21" x2="16" y2="21"/></svg>';
+    const name = t.filename || t.url;
+    const typeLabel = t.type === 'audio' ? 'MP3 音频' : `MP4 ${t.quality}`;
+    const progressBar = (t.status === 'downloading')
+      ? `<div class="progress-wrap"><div class="progress-fill" style="width:${t.progress}%"></div></div>`
+      : '';
+    return `<div class="task-item">
+      <div class="task-icon ${t.type}">${icon}</div>
+      <div class="task-info">
+        <div class="name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+        <div class="meta">${typeLabel}${progressBar}</div>
+      </div>
+      <span class="task-status ${t.status}">${statusMap[t.status] || t.status}</span>
+      ${(t.status === 'completed' || t.status === 'failed') ? `<button class="task-delete" data-id="${t.id}" title="删除">✕</button>` : ''}
+    </div>`;
+  }).join('');
+
+  // wire delete buttons
+  taskList.querySelectorAll('.task-delete').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      fetch(`/api/tasks/${id}`, { method: 'DELETE' }).then(() => fetchTasks());
+    });
+  });
+}
+
+const statusMap = {
+  queued: '排队中', downloading: '下载中', completed: '已完成', failed: '失败',
+};
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// ── Keyboard shortcut: Enter to download ──
+urlInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !dlBtn.disabled) dlBtn.click();
+});
+
+// ── Start polling on load ──
+startPolling();
+</script>
+</body>
+</html>
